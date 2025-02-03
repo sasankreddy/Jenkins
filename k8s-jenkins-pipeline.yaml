@@ -1,0 +1,128 @@
+# Jenkins Kubernetes Deployment Pipeline
+
+## Overview
+This repository demonstrates the CI/CD pipeline using Jenkins for automating the deployment of microservices to a Kubernetes cluster. The pipeline applies Kubernetes resources including Secrets, Deployments, and Services, and ensures the successful rollout of each microservice.
+
+## Prerequisites
+- Jenkins server with Docker and Kubernetes CLI (`kubectl`) installed
+- Docker images for the microservices pushed to a Docker registry
+- Kubernetes cluster set up and accessible
+- Kubernetes manifest files for Secrets, Deployments, and Services for each microservice
+
+## Pipeline Structure
+
+### 1. **Deploy Secrets**:
+   - Applies Kubernetes Secrets for each microservice.
+   - Ensures sensitive data (e.g., JWT secrets, database credentials) are securely available in the cluster.
+
+### 2. **Deploy Deployments**:
+   - Applies Kubernetes Deployment manifests for each microservice.
+   - Manages microservice pods with configurations like resource allocation and replicas.
+
+### 3. **Deploy Services**:
+   - Applies Kubernetes Service manifests for exposing each microservice.
+   - Facilitates communication between microservices within the cluster and externally.
+
+### 4. **Verify Deployment**:
+   - Verifies the rollout status of each microservice deployment.
+   - Ensures that all services are successfully deployed and running.
+
+## Steps in the Pipeline
+
+- **Stage: Deploy Secrets**
+  - Uses `kubectl apply` to deploy Kubernetes secrets for `user-service`, `trip-service`, and `registration-service`.
+  
+- **Stage: Deploy Deployments**
+  - Deploys Kubernetes Deployments for each microservice using `kubectl apply`.
+
+- **Stage: Deploy Services**
+  - Deploys Kubernetes Service resources for the microservices to expose them internally or externally.
+
+- **Stage: Verify Deployment**
+  - Verifies the rollout status of the deployments to ensure they have been applied successfully.
+
+## Future Scope
+- **Orchestrating Containers with Kubernetes**: 
+  - Extend the pipeline to include Helm for managing Kubernetes resources.
+  - Integrate automated scaling based on traffic and load.
+  - Implement monitoring and logging for better observability.
+
+## Usage
+1. Clone this repository to your local machine or Jenkins server.
+2. Configure Jenkins with the necessary Docker and Kubernetes credentials.
+3. Add your own Docker images and Kubernetes YAML files (Secrets, Deployments, Services).
+4. Trigger the pipeline in Jenkins to deploy the services to the Kubernetes cluster.
+
+----
+
+## Pipeline
+
+
+pipeline {
+    agent any
+
+    stages {
+        // Stage to deploy secrets for each microservice
+        stage('Deploy Secrets') {
+            steps {
+                script {
+                    echo "Applying Secrets for all services..."
+                    sh """
+                    kubectl apply -f C:/Users/shash/Documents/Wandora/kubernetes/user-microservice/user-service-secret.yaml
+                    kubectl apply -f C:/Users/shash/Documents/Wandora/kubernetes/trip-microservice/trip-service-secret.yaml
+                    kubectl apply -f C:/Users/shash/Documents/Wandora/kubernetes/registration-service/registration-service-secret.yaml
+                    """
+                }
+            }
+        }
+
+        // Stage to deploy Kubernetes deployments for each microservice
+        stage('Deploy Deployments') {
+            steps {
+                script {
+                    echo "Applying Deployments..."
+                    sh """
+                    kubectl apply -f C:/Users/shash/Documents/Wandora/kubernetes/user-microservice/user-service-deployment.yaml
+                    kubectl apply -f C:/Users/shash/Documents/Wandora/kubernetes/trip-microservice/trip-service-deployment.yaml
+                    kubectl apply -f C:/Users/shash/Documents/Wandora/kubernetes/registration-service/registration-service-deployment.yaml
+                    """
+                }
+            }
+        }
+
+        // Stage to deploy Kubernetes services for the microservices
+        stage('Deploy Services') {
+            steps {
+                script {
+                    echo "Applying Services..."
+                    sh """
+                    kubectl apply -f C:/Users/shash/Documents/Wandora/kubernetes/user-microservice/user-service-service.yaml
+                    kubectl apply -f C:/Users/shash/Documents/Wandora/kubernetes/trip-microservice/trip-service-service.yaml
+                    kubectl apply -f C:/Users/shash/Documents/Wandora/kubernetes/registration-service/registration-service-service.yaml
+                    """
+                }
+            }
+        }
+
+        // Stage to verify the status of the deployments
+        stage('Verify Deployment') {
+            steps {
+                script {
+                    echo "Verifying deployment status..."
+                    sh """
+                    kubectl rollout status deployment/registration-service || true
+                    kubectl rollout status deployment/trip-microservice || true
+                    kubectl rollout status deployment/user-microservice || true
+                    """
+                }
+            }
+        }
+    }
+}
+
+
+## Ongoing Updates
+1. **Container Orchestration with Helm**
+2. **Automated Scaling**
+3. **Advanced Monitoring and Logging**
+4. **CI/CD Pipeline Enhancements**
