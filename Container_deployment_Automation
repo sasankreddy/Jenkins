@@ -1,0 +1,169 @@
+Here's a more concise and technical version of the README content:
+
+---
+
+# Jenkins Deployment Pipeline for Microservices
+
+This repository demonstrates the automation of deploying a microservices-based application using **Jenkins**, **Docker**, and **MongoDB**. The pipeline pulls Docker images for microservices and MongoDB, runs containers, and configures environment variables securely.
+
+## Prerequisites
+
+- **Jenkins** with **Pipeline Plugin** and **Docker Pipeline Plugin**.
+- **Docker** installed on the Jenkins host.
+- **MongoDB URI** and **JWT Secrets** configured in Jenkins credentials.
+- **Docker Hub** account with images pushed for the services.
+
+## Process
+
+1. **Verify Docker Installation**: Ensures Docker is available on the Jenkins agent.
+2. **Login to Docker Hub**: Authenticates with Docker Hub using Jenkins credentials.
+3. **Pull Docker Images**: Fetches Docker images for microservices and MongoDB.
+4. **Run MongoDB**: Starts MongoDB container, exposing it on port `27017`.
+5. **Run Microservices**: Deploys three microservices with environment variables for MongoDB and JWT secrets.
+
+Sensitive data like MongoDB URI and JWT secrets are securely injected from Jenkins credentials.
+
+## Future Scope: Orchestrating Containers through Kubernetes
+
+- **Kubernetes Integration**: Migrate the deployment to Kubernetes for better scalability and management.
+- **Helm Charts**: Use Helm for defining and managing Kubernetes deployments.
+- **Secrets Management**: Use Kubernetes Secrets for sensitive data management.
+- **Advanced Deployments**: Implement strategies like canary and blue-green deployments.
+- **Monitoring & Logging**: Integrate Prometheus, Grafana, and ELK stack for observability.
+
+---
+
+## Pipeline
+
+pipeline {
+    agent any
+
+    environment {
+        // Docker image names for each microservice
+        SERVICE_1_IMAGE = 'sasankreddy18/wandora:user_service_V1.0'
+        SERVICE_2_IMAGE = 'sasankreddy18/wandora:trip_service_V1.0'
+        SERVICE_3_IMAGE = 'sasankreddy18/wandora:registration_service_V1.0'
+
+        // MongoDB URI stored as a secret in Jenkins
+        MONGO_URI = credentials('mongo-uri')  // Use Jenkins credentials for MongoDB URI
+
+        // JWT secrets for each service stored as Jenkins credentials
+        JWT_SECRET_SERVICE_1 = credentials('jwt-secret-service-1')  // Use Jenkins credentials for JWT secret
+        JWT_SECRET_SERVICE_2 = credentials('jwt-secret-service-2')  // Use Jenkins credentials for JWT secret
+        JWT_SECRET_SERVICE_3 = credentials('jwt-secret-service-3')  // Use Jenkins credentials for JWT secret
+
+        // MongoDB image and volume settings
+        MONGO_IMAGE = 'mongo:6.0'
+        MONGO_DATA_VOLUME = 'mongo_data'
+
+        // General environment variables
+        NODE_ENV = 'production'
+        DOCKER_CREDENTIALS = credentials('myDocker')  // Jenkins credentials ID for Docker Hub login
+    }
+
+    stages {
+        stage('Verify Docker Installation') {
+            steps {
+                script {
+                    sh 'docker --version'  // Verify Docker version is installed
+                }
+            }
+        }
+
+        stage('Login to Docker Hub') {
+            steps {
+                script {
+                    // Login to Docker Hub using Jenkins credentials
+                    withCredentials([usernamePassword(credentialsId: DOCKER_CREDENTIALS, usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                        sh "echo ${DOCKER_PASSWORD} | docker login -u ${DOCKER_USERNAME} --password-stdin"
+                    }
+                }
+            }
+        }
+
+        stage('Pull Docker Images') {
+            steps {
+                script {
+                    // Pull Docker images for all three microservices and MongoDB
+                    sh "docker pull ${SERVICE_1_IMAGE}"
+                    sh "docker pull ${SERVICE_2_IMAGE}"
+                    sh "docker pull ${SERVICE_3_IMAGE}"
+                    echo "Pulled Docker images for all services."
+
+                    // Pull MongoDB image
+                    sh "docker pull ${MONGO_IMAGE}"
+                    echo "Pulled MongoDB image."
+                }
+            }
+        }
+
+        stage('Run MongoDB Container') {
+            steps {
+                script {
+                    // Run MongoDB container
+                    sh """
+                        docker run -d --name mongo \
+                            -p 27017:27017 \
+                            -v ${MONGO_DATA_VOLUME}:/data/db \
+                            ${MONGO_IMAGE}
+                    """
+                    echo "MongoDB container is running."
+                }
+            }
+        }
+
+        stage('Run Microservice 1 (User Service)') {
+            steps {
+                script {
+                    // Run Service 1 container with JWT_SECRET and MONGO_URI from Jenkins credentials
+                    sh """
+                        docker run -d --name service1 \
+                            -p 3001:3000 \
+                            --link mongo:mongo \
+                            -e NODE_ENV=${NODE_ENV} \
+                            -e JWT_SECRET=${JWT_SECRET_SERVICE_1} \
+                            -e MONGO_URI=${MONGO_URI} \
+                            ${SERVICE_1_IMAGE}
+                    """
+                    echo "Microservice 1 (User Service) container is running."
+                }
+            }
+        }
+
+        stage('Run Microservice 2 (Trip Service)') {
+            steps {
+                script {
+                    // Run Service 2 container with JWT_SECRET and MONGO_URI from Jenkins credentials
+                    sh """
+                        docker run -d --name service2 \
+                            -p 3002:3000 \
+                            --link mongo:mongo \
+                            -e NODE_ENV=${NODE_ENV} \
+                            -e JWT_SECRET=${JWT_SECRET_SERVICE_2} \
+                            -e MONGO_URI=${MONGO_URI} \
+                            ${SERVICE_2_IMAGE}
+                    """
+                    echo "Microservice 2 (Trip Service) container is running."
+                }
+            }
+        }
+
+        stage('Run Microservice 3 (Registration Service)') {
+            steps {
+                script {
+                    // Run Service 3 container with JWT_SECRET and MONGO_URI from Jenkins credentials
+                    sh """
+                        docker run -d --name service3 \
+                            -p 3003:3000 \
+                            --link mongo:mongo \
+                            -e NODE_ENV=${NODE_ENV} \
+                            -e JWT_SECRET=${JWT_SECRET_SERVICE_3} \
+                            -e MONGO_URI=${MONGO_URI} \
+                            ${SERVICE_3_IMAGE}
+                    """
+                    echo "Microservice 3 (Registration Service) container is running."
+                }
+            }
+        }
+    }
+}
